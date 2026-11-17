@@ -1,0 +1,43 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --font-fa: "Vazirmatn", system-ui, sans-serif;
+    --font-en: "Plus Jakarta Sans", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", monospace;
+  }
+
+  body {
+    font-family: var(--font-fa);
+    overflow-x: hidden;
+  }
+
+  /* Android TV 10-foot high-visibility D-pad focus ring */
+  [data-tv-focusable="true"]:focus-visible,
+  [data-tv-focusable="true"].tv-focused {
+    outline: 3px solid #f59e0b;
+    outline-offset: 3px;
+    box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.25);
+  }
+}
+
+.font-en {
+  font-family: var(--font-en);
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.font-ipa {
+  font-family: var(--font-mono);
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

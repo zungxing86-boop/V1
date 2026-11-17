@@ -1,0 +1,6 @@
+{
+  "name": "پراسپکت ۲ — معلم هوشمند اندروید تی‌وی",
+  "description": "نرم‌افزار آموزشی تعاملی و هوشمند کتاب زبان انگلیسی پایه هشتم (Prospect 2) سازگار با تلویزیون اندرویدی (Android TV) همراه با آموزش گام‌به‌گام، تلفظ همزمان، گرامر، حل تمرین و مرور هوشمند.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,9 @@
+{
+  "appId": "ir.edu.prospect2.tvtutor",
+  "appName": "Prospect 2 TV Tutor",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  }
+}
