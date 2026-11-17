@@ -1,17 +1,28 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import legacy from '@vitejs/plugin-legacy';
 import fs from 'fs';
 import path from 'path';
 import {defineConfig} from 'vite';
 import {VitePWA} from 'vite-plugin-pwa';
 
 export default defineConfig(() => {
+  const isNative = process.env.VITE_NATIVE_APP === '1';
   return {
+    base: isNative ? './' : '/',
     plugins: [
       react(),
+      // Android TV WebView can lag behind the installed Android version.
+      ...(isNative ? [legacy({
+        targets: ['Chrome >= 60'],
+        modernTargets: ['Chrome >= 64'],
+        modernPolyfills: true,
+      })] : []),
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
+        // APK assets are bundled by Capacitor; a service worker can serve stale code.
+        injectRegister: isNative ? false : 'auto',
         includeAssets: ['icon.svg', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png'],
         manifest: {
           id: '/',
