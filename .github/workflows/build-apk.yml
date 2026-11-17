@@ -33,7 +33,7 @@ jobs:
           fi
           if [ ! -f "dist/index.html" ]; then
             npm install --legacy-peer-deps
-            npm run build
+            VITE_NATIVE_APP=1 npm run build
           fi
           npm install --legacy-peer-deps @capacitor/core@^7.4.0 @capacitor/cli@^7.4.0 @capacitor/android@^7.4.0
 
