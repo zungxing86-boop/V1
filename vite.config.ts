@@ -10,6 +10,14 @@ export default defineConfig(() => {
   const isNative = process.env.VITE_NATIVE_APP === '1';
   return {
     base: isNative ? './' : '/',
+    worker: {
+      plugins: () => [{
+        name: 'decode-espeak-source',
+        load(id: string) {
+          if (id.endsWith('/mespeak/src/ESpeak.js')) return fs.readFileSync(id, 'latin1');
+        },
+      }],
+    },
     plugins: [
       react(),
       // Android TV WebView can lag behind the installed Android version.

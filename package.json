@@ -32,6 +32,7 @@
     "@vitejs/plugin-legacy": "^8.2.4",
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.25.0",
+    "mespeak": "^2.0.2",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
     "typescript": "^7.0.2"

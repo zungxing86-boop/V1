@@ -1,3 +1,4 @@
+import { VocabPicture } from './VocabPicture';
 import React, { useMemo, useState } from 'react';
 import { BookOpen, CheckCircle2, RotateCcw, Search, Volume2, XCircle } from 'lucide-react';
 import { PROSPECT2_VOCAB } from '../data/prospect2';
@@ -77,7 +78,7 @@ export const VocabularyLab: React.FC<VocabularyLabProps> = ({ progress, onRecord
             آموزش واژگان، دیکشنری هوشمند و تکرار فاصله‌دار
           </h1>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            تمامی لغات دروس ۱ تا ۷ و دیکشنری تصویری کتاب (صفحات ۶۶ تا ۹۱) همراه با تلفظ صوتی و شناسایی لغات فراموش‌شده.
+            تمامی لغات دروس ۱ تا ۷ و دیکشنری با تصویرسازی آموزشی آفلاین همراه با تلفظ صوتی و شناسایی لغات فراموش‌شده.
           </p>
         </div>
 
@@ -85,7 +86,7 @@ export const VocabularyLab: React.FC<VocabularyLabProps> = ({ progress, onRecord
           {[
             { id: 'dictionary' as LabTab, label: 'دیکشنری هوشمند' },
             { id: 'srs-quiz' as LabTab, label: `آزمون و مرور هوشمند (${weakIds.length} ضعیف)` },
-            { id: 'photo-dict' as LabTab, label: 'دیکشنری تصویری کتاب' },
+            { id: 'photo-dict' as LabTab, label: 'دیکشنری تصویری آفلاین' },
           ].map((t) => (
             <button
               key={t.id}
@@ -146,6 +147,7 @@ export const VocabularyLab: React.FC<VocabularyLabProps> = ({ progress, onRecord
                   key={item.id}
                   className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 flex flex-col justify-between space-y-4"
                 >
+                  {tab === 'photo-dict' && <VocabPicture item={item} />}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
                       <span>

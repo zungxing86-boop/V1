@@ -1,184 +1,70 @@
-// Dual-mode speech & synced word-highlighter engine:
-// 1. Tries cached or server-side Gemini TTS (/api/tts) when online for studio-quality pronunciation
-// 2. Seamlessly falls back to browser Web Speech API (speechSynthesis) + word-by-word timer for 100% offline TV operation
-
-const ttsCache = new Map<string, string>(); // key -> data URL
+import { synthesizeOffline } from './offlineSpeech';
 
 export interface SpeakOptions {
   text: string;
   rate?: number;
   preferOnlineTTS?: boolean;
-  onWordIndex?: (wordIndex: number) => void;
+  onWordIndex?: (index: number) => void;
   onEnd?: () => void;
-  onError?: (msg: string) => void;
+  onError?: (message: string) => void;
 }
-
-let activeAudioEl: HTMLAudioElement | null = null;
-let activeTimerIds: number[] = [];
+let context: AudioContext | undefined;
+let source: AudioBufferSourceNode | undefined;
+let generation = 0;
+let timers: number[] = [];
+let finish: (() => void) | undefined;
 
 export function stopSpeaking(): void {
-  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
-  }
-  if (activeAudioEl) {
-    activeAudioEl.pause();
-    activeAudioEl.currentTime = 0;
-    activeAudioEl = null;
-  }
-  activeTimerIds.forEach((id) => window.clearTimeout(id));
-  activeTimerIds = [];
+  generation++;
+  source?.stop();
+  source = undefined;
+  timers.forEach(clearTimeout);
+  timers = [];
+  finish?.();
+  finish = undefined;
 }
 
-function scheduleFallbackWordHighlight(
-  words: string[],
-  rate: number,
-  totalDurationMs: number | null,
-  onWordIndex?: (idx: number) => void,
-  onEnd?: () => void
-): void {
-  if (!words.length) {
-    onEnd?.();
-    return;
-  }
-  const avgMsPerWord = totalDurationMs
-    ? Math.max(180, totalDurationMs / words.length)
-    : Math.round(410 / Math.max(0.5, rate));
-
-  words.forEach((word, idx) => {
-    const t = window.setTimeout(() => {
-      onWordIndex?.(idx);
-    }, idx * avgMsPerWord);
-    activeTimerIds.push(t);
-    // Slightly stretch pause after punctuation
-    void word;
-  });
-
-  if (!totalDurationMs) {
-    const endTimer = window.setTimeout(() => {
-      onWordIndex?.(-1);
-      onEnd?.();
-    }, words.length * avgMsPerWord + 250);
-    activeTimerIds.push(endTimer);
-  }
-}
-
-export async function speakEnglish({
-  text,
-  rate = 0.9,
-  preferOnlineTTS = true,
-  onWordIndex,
-  onEnd,
-}: SpeakOptions): Promise<'gemini-tts' | 'webspeech' | 'visual-sync'> {
+// English voice and synthesis engine ship inside the APK. No network or system TTS.
+export async function speakEnglish({ text, rate = 0.9, onWordIndex, onEnd, onError }: SpeakOptions): Promise<'offline'> {
   stopSpeaking();
-  const cleanText = text.trim();
-  if (!cleanText) {
-    onEnd?.();
-    return 'visual-sync';
-  }
-
-  const words = cleanText.split(/\s+/);
-  const cacheKey = `${cleanText}::${rate}`;
-
-  // 1. Check in-memory TTS cache or online Gemini TTS when online
-  if (preferOnlineTTS && typeof navigator !== 'undefined' && navigator.onLine) {
-    try {
-      let dataUrl = ttsCache.get(cacheKey);
-      if (!dataUrl) {
-        const res = await fetch('/api/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: cleanText,
-            style:
-              rate < 0.85
-                ? 'Clear, slow, articulated English teacher for 8th-grade students'
-                : 'Warm, natural English teacher speaking clearly for 8th-grade students',
-          }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data?.audioBase64) {
-            dataUrl = `data:${data.mimeType || 'audio/wav'};base64,${data.audioBase64}`;
-            ttsCache.set(cacheKey, dataUrl);
-          }
+  const current = generation;
+  const clean = text.trim();
+  if (!clean) { onEnd?.(); return 'offline'; }
+  try {
+    context ??= new AudioContext();
+    // Unlock audio during the remote-control click, before synthesis completes.
+    await context.resume();
+    const wav = await synthesizeOffline(clean, Math.max(0.5, Math.min(1.5, rate)));
+    if (current !== generation) return 'offline';
+    const buffer = await context.decodeAudioData(wav.slice().buffer as ArrayBuffer);
+    if (current !== generation) return 'offline';
+    source = context.createBufferSource();
+    source.buffer = buffer;
+    source.connect(context.destination);
+    const words = clean.split(/\s+/);
+    await new Promise<void>((resolve) => {
+      finish = resolve;
+      source!.onended = () => {
+        if (current === generation) {
+          timers.forEach(clearTimeout); timers = [];
+          onWordIndex?.(-1); onEnd?.(); finish = undefined;
         }
-      }
-
-      if (dataUrl) {
-        const audio = new Audio(dataUrl);
-        audio.playbackRate = rate < 0.85 ? 0.88 : 1.0;
-        activeAudioEl = audio;
-
-        await new Promise<void>((resolve, reject) => {
-          audio.onloadedmetadata = () => {
-            const durMs = Number.isFinite(audio.duration) ? (audio.duration * 1000) / audio.playbackRate : null;
-            scheduleFallbackWordHighlight(words, rate, durMs, onWordIndex);
-          };
-          audio.onended = () => {
-            onWordIndex?.(-1);
-            onEnd?.();
-            resolve();
-          };
-          audio.onerror = () => reject(new Error('Audio playback error'));
-          audio.play().catch(reject);
-        });
-        return 'gemini-tts';
-      }
-    } catch {
-      // Fall through seamlessly to offline Web Speech API
+        resolve();
+      };
+      words.forEach((_, i) => timers.push(window.setTimeout(() => {
+        if (current === generation) onWordIndex?.(i);
+      }, i * buffer.duration * 1000 / words.length)));
+      source!.start();
+    });
+  } catch (error) {
+    if (current === generation) {
+      onWordIndex?.(-1);
+      onError?.(String(error));
+      onEnd?.();
+      window.dispatchEvent(new CustomEvent('speech-error'));
     }
   }
-
-  // 2. Offline Web Speech API fallback
-  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = 'en-US';
-    utterance.rate = rate;
-    utterance.pitch = 1.0;
-
-    const voices = window.speechSynthesis.getVoices();
-    const enVoice =
-      voices.find((v) => v.lang.startsWith('en-US')) ||
-      voices.find((v) => v.lang.startsWith('en-GB')) ||
-      voices.find((v) => v.lang.startsWith('en'));
-    if (enVoice) utterance.voice = enVoice;
-
-    let boundaryFired = false;
-    utterance.onboundary = (event) => {
-      if (event.name === 'word' || typeof event.charIndex === 'number') {
-        boundaryFired = true;
-        const prefix = cleanText.slice(0, event.charIndex);
-        const wordIdx = prefix.trim() ? prefix.trim().split(/\s+/).length : 0;
-        onWordIndex?.(Math.min(words.length - 1, wordIdx));
-      }
-    };
-
-    // Start fallback timer in case WebView / Android TV TTS doesn't emit onboundary
-    const boundaryCheckTimer = window.setTimeout(() => {
-      if (!boundaryFired) {
-        scheduleFallbackWordHighlight(words, rate, null, onWordIndex);
-      }
-    }, 180);
-    activeTimerIds.push(boundaryCheckTimer);
-
-    utterance.onend = () => {
-      stopSpeaking();
-      onWordIndex?.(-1);
-      onEnd?.();
-    };
-    utterance.onerror = () => {
-      stopSpeaking();
-      onWordIndex?.(-1);
-      onEnd?.();
-    };
-
-    window.speechSynthesis.speak(utterance);
-    return 'webspeech';
-  }
-
-  // 3. Visual-only timed karaoke fallback if TTS is completely unavailable
-  scheduleFallbackWordHighlight(words, rate, null, onWordIndex, onEnd);
-  return 'visual-sync';
+  return 'offline';
 }
 
 export function playFeedbackTone(type: 'correct' | 'wrong', enabled = true): void {

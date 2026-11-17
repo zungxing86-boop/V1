@@ -41,3 +41,30 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Leave an overscan-safe margin on every side of the television. */
+html, body, #root { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+body { background: #0b1726; }
+#root { display: flex; align-items: center; justify-content: center; }
+.tv-frame {
+  width: 90vw;
+  height: 90vh;
+  overflow: hidden;
+  position: relative;
+  transform: translateZ(0);
+  border: 2px solid #64748b;
+  border-radius: 18px;
+  box-shadow: 0 12px 40px #0008;
+  scrollbar-gutter: stable;
+  overflow-wrap: anywhere;
+}
+.tv-frame main { min-width: 0; }
+.tv-frame img { max-width: 100%; }
+@media (max-width: 1100px) {
+  .tv-frame header > div { gap: 12px; flex-wrap: wrap; }
+}
+
+.vocab-picture { min-height: 150px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: #d1fae5; color: #0f766e; border: 1px solid #99f6e4; }
+.picture-country { font: bold 18px system-ui; letter-spacing: 3px; }
+
+.tv-scroll { width: 100%; height: 100%; overflow: auto; }

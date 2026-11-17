@@ -1,0 +1,6 @@
+Offline English speech uses meSpeak (Norbert Landsteiner), based on speak.js (Alon Zakai) and eSpeak (Jonathan Duddington), distributed under GNU GPL.
+Source for the exact bundled version: https://registry.npmjs.org/mespeak/-/mespeak-2.0.2.tgz
+Upstream: https://github.com/mikolalysenko/mespeak
+This application bundles the engine and en-US voice without requiring a system voice download.
+Application integration source: https://github.com/zungxing86-boop/V1
+Engine source is unmodified; the build loader decodes its original Latin-1 source to UTF-8.

@@ -29,6 +29,12 @@ export default function App() {
   const [view, setView] = useState<AppView>('home');
   const [activeLessonId, setActiveLessonId] = useState<number>(() => progress.lastLessonId || 1);
   const [activeStage, setActiveStage] = useState<LessonStage>(() => progress.lastStage || 'conversation');
+  const [speechError, setSpeechError] = useState(false);
+  useEffect(() => {
+    const handler = () => setSpeechError(true);
+    window.addEventListener('speech-error', handler);
+    return () => window.removeEventListener('speech-error', handler);
+  }, []);
   const [tutorOpen, setTutorOpen] = useState(false);
   const [tutorPrefill, setTutorPrefill] = useState<string | undefined>(undefined);
   const isOnline = useOnlineStatus();
@@ -135,7 +141,14 @@ export default function App() {
   const activeLesson = getLessonById(activeLessonId);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors">
+    <div className="tv-frame bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors">
+      <div className="tv-scroll">
+      {speechError && (
+        <div role="alert" className="p-4 bg-amber-100 text-slate-900">
+          پخش صدا ممکن نشد. صدای تلویزیون را بررسی کنید و دوباره تلاش کنید.
+          <button data-tv-focusable="true" onClick={() => setSpeechError(false)}>بستن</button>
+        </div>
+      )}
       <TopBar
         currentView={view}
         onNavigate={(v) => setView(v)}
@@ -223,6 +236,7 @@ export default function App() {
           حالت آفلاین فعال است — تمام درس‌ها و پیشرفت شما روی دستگاه ذخیره می‌شود
         </div>
       )}
+      </div>
     </div>
   );
 }
