@@ -15,6 +15,7 @@ import {
 } from './utils/storage';
 import { useTVNavigation } from './hooks/useTVNavigation';
 import { useOnlineStatus } from './hooks/usePWAInstall';
+import { LessonSidebar } from './components/LessonSidebar';
 import { TopBar } from './components/TopBar';
 import { HomeHub } from './components/HomeHub';
 import { LessonWorkspace } from './components/LessonWorkspace';
@@ -158,7 +159,12 @@ export default function App() {
         }}
       />
 
-      <main className="pb-12">
+      <div className={(view === 'home' || view === 'lesson') ? 'learning-layout' : ''}>
+        {(view === 'home' || view === 'lesson') && (
+          <LessonSidebar progress={progress} activeId={view === 'lesson' ? activeLessonId : undefined}
+            onOpen={id => handleOpenLesson(id)} />
+        )}
+      <main className="pb-12 learning-main">
         {view === 'home' && (
           <HomeHub
             progress={progress}
@@ -223,6 +229,7 @@ export default function App() {
 
         {view === 'blueprint' && <TechnicalBlueprintView />}
       </main>
+      </div>
 
       <SmartTutorDrawer
         isOpen={tutorOpen}
